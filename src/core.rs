@@ -5,6 +5,8 @@ use std::{
 
 use itertools::Itertools;
 
+mod frame;
+
 /// Write minimap to the writer.
 pub fn write(
     mut writer: impl Write,
@@ -40,7 +42,7 @@ pub fn write(
             }
             frame.iter_mut().skip(chunk_size).for_each(|row| *row = 0..0);
             scale_frame(&mut frame, hscale);
-            write_frame(&mut writer, &frame, padding)
+            frame::write(&mut writer, &frame, padding)
         })
 }
 
@@ -78,24 +80,6 @@ pub fn write_to_string(reader: impl BufRead, hscale: f64, vscale: f64, padding: 
     let mut buf = Vec::new();
     write(&mut buf, reader, hscale, vscale, padding)?;
     Ok(String::from_utf8(buf).unwrap())
-}
-
-fn write_frame(mut writer: impl Write, frame: &[Range<usize>], padding: Option<usize>) -> std::io::Result<()> {
-    let idx = |pos| {
-        frame
-            .iter()
-            .enumerate()
-            .fold(0, |acc, (i, x)| if x.contains(&pos) { acc + (1 << i) } else { acc })
-    };
-    let end = frame.iter().max_by_key(|range| range.end).unwrap().end;
-    let line: String = (0..end)
-        .step_by(2)
-        .map(|i| BRAILLE_MATRIX[(idx(i)) + (idx(i + 1) << 4)])
-        .collect();
-    match padding {
-        Some(padding) => writeln!(writer, "{0:<1$}", line, padding),
-        None => writeln!(writer, "{}", line),
-    }
 }
 
 fn scale_frame(frame: &mut [Range<usize>], factor: f64) {
