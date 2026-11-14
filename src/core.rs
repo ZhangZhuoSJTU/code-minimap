@@ -88,10 +88,13 @@ fn write_frame(mut writer: impl Write, frame: &[Range<usize>], padding: Option<u
             .fold(0, |acc, (i, x)| if x.contains(&pos) { acc + (1 << i) } else { acc })
     };
     let end = frame.iter().max_by_key(|range| range.end).unwrap().end;
-    let line: String = (0..end)
-        .step_by(2)
-        .map(|i| BRAILLE_MATRIX[(idx(i)) + (idx(i + 1) << 4)])
-        .collect();
+    let line: &'static str = Box::leak(
+        (0..end)
+            .step_by(2)
+            .map(|i| BRAILLE_MATRIX[(idx(i)) + (idx(i + 1) << 4)])
+            .collect::<String>()
+            .into_boxed_str(),
+    );
     match padding {
         Some(padding) => writeln!(writer, "{0:<1$}", line, padding),
         None => writeln!(writer, "{}", line),
